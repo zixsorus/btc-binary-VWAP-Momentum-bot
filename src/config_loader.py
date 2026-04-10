@@ -229,10 +229,15 @@ def load_config(config_path: Optional[str] = None) -> Config:
     )
 
     web_data = data.get("web_dashboard", {})
+    # Use environment variables for Railway/Cloud compatibility
+    web_host = os.getenv("WEB_HOST", str(web_data.get("host", "127.0.0.1")))
+    # Railway sets the PORT environment variable
+    web_port = int(os.getenv("PORT", web_data.get("port", 8765)))
+
     web_dashboard = WebDashboardConfig(
         enabled=bool(web_data.get("enabled", False)),
-        host=str(web_data.get("host", "127.0.0.1")),
-        port=int(web_data.get("port", 8765)),
+        host=web_host,
+        port=web_port,
     )
     
     # Polymarket (from env only - secrets)

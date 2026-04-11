@@ -3,11 +3,11 @@
 
   "market": {
     "_comment": "5 or 15 — slug btc-updown-5m-<epoch> or btc-updown-15m-<epoch>",
-    "interval_minutes": 5
+    "interval_minutes": 15
   },
 
   "strategy": {
-    "min_price": 0.75,
+    "min_price": 0.55,
     "max_price": 0.88,
     "_comment_5m": "Below min_elapsed / no_entry_cutoff are scaled for 5m (300s). For 15m, raise e.g. min_elapsed_sec 530, no_entry_before_end_sec 335.",
     "min_elapsed_sec": 180,
@@ -20,7 +20,7 @@
   },
 
   "entry": {
-    "bet_amount_usd": 3,
+    "bet_amount_usd": 5,
     "price_offset": 0.02,
     "order_type": "FAK",
     "max_retries": 3,

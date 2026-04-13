@@ -10,10 +10,10 @@
     "min_price": 0.55,
     "max_price": 0.88,
     "_comment_5m": "Below min_elapsed / no_entry_cutoff are scaled for 5m (300s). For 15m, raise e.g. min_elapsed_sec 530, no_entry_before_end_sec 335.",
-    "min_elapsed_sec": 180,
+    "min_elapsed_sec": 530,
     "min_deviation_pct": 3,
     "max_deviation_pct": 100,
-    "no_entry_before_end_sec": 110,
+    "no_entry_before_end_sec": 335,
     "momentum_window_sec": 60,
     "vwap_window_sec": 30,
     "win_rate_csv": "data/win_rate.csv"

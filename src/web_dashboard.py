@@ -13,7 +13,8 @@ import time
 from typing import Any, Dict
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+import os
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 import uvicorn
 
 logger = logging.getLogger("btc_live")
@@ -59,6 +60,13 @@ _HTML = """<!DOCTYPE html>
     <div class="card"><h2>DOWN</h2><div id="down" class="mono"></div></div>
     <div class="card btc"><h2>BTC / USD (Chainlink)</h2><div id="btc" class="mono"></div></div>
     <div class="card"><h2>Trading</h2><div id="trading" class="mono"></div></div>
+    <div class="card">
+      <h2>Logs & History</h2>
+      <div id="log-list" class="mono">Loading logs...</div>
+      <div style="margin-top: 0.5rem">
+        <button onclick="refreshLogs()" style="font-size: 0.7rem; cursor: pointer; background: var(--panel); color: var(--blue); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;">Refresh List</button>
+      </div>
+    </div>
   </div>
   <footer>Refreshes every second · <span id="err"></span></footer>
   <script>
@@ -169,8 +177,35 @@ _HTML = """<!DOCTYPE html>
       };
       r.send();
     }
+    function refreshLogs() {
+      var r = new XMLHttpRequest();
+      r.open("GET", "/api/logs", true);
+      r.onreadystatechange = function () {
+        if (r.readyState !== 4) return;
+        try {
+          if (r.status !== 200) throw new Error("HTTP " + r.status);
+          var files = JSON.parse(r.responseText);
+          var html = "";
+          if (files.length === 0) {
+            html = "No logs yet";
+          } else {
+            for (var i = 0; i < files.length; i++) {
+              var f = files[i];
+              html += '<div style="margin-bottom: 2px;"><a href="/api/download/' + encodeURIComponent(f.name) + '" download style="color: var(--blue); text-decoration: none;">' + 
+                      esc(f.name) + '</a> <span style="color: var(--muted); font-size: 0.7rem;">(' + f.size + ')</span></div>';
+            }
+          }
+          document.getElementById("log-list").innerHTML = html;
+        } catch (e) {
+          document.getElementById("log-list").textContent = "Error: " + e.message;
+        }
+      };
+      r.send();
+    }
     tick();
     setInterval(tick, 1000);
+    refreshLogs();
+    setInterval(refreshLogs, 10000);
   </script>
 </body>
 </html>
@@ -230,6 +265,36 @@ def build_app(holder: WebSnapshotHolder) -> FastAPI:
     @app.get("/api/state")
     async def api_state():
         return JSONResponse(_sanitize_for_json(holder.get()))
+
+    @app.get("/api/logs")
+    async def api_logs():
+        log_dir = "logs"
+        if not os.path.exists(log_dir):
+            return JSONResponse([])
+        
+        files = []
+        for f in sorted(os.listdir(log_dir)):
+            path = os.path.join(log_dir, f)
+            if os.path.isfile(path):
+                size_bytes = os.path.getsize(path)
+                if size_bytes < 1024:
+                    sz = f"{size_bytes}B"
+                elif size_bytes < 1024 * 1024:
+                    sz = f"{size_bytes/1024:.1f}KB"
+                else:
+                    sz = f"{size_bytes/(1024*1024):.1f}MB"
+                files.append({"name": f, "size": sz})
+        return JSONResponse(files)
+
+    @app.get("/api/download/{filename}")
+    async def api_download(filename: str):
+        log_dir = "logs"
+        safe_path = os.path.abspath(os.path.join(log_dir, filename))
+        if not safe_path.startswith(os.path.abspath(log_dir)):
+            return JSONResponse({"error": "Forbidden"}, status_code=403)
+        if not os.path.exists(safe_path):
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        return FileResponse(path=safe_path, filename=filename)
 
     return app
 
